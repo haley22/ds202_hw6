@@ -1,0 +1,80 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+
+## Top dogs
+
+In this homework, you will try to reproduce the fantastic infographic for [top dogs](https://informationisbeautiful.net/visualizations/best-in-show-whats-the-top-data-dog/), originally produced by David McCandless. The raw data can be found [here](https://docs.google.com/spreadsheets/d/1l_HfF5EaN-QgnLc2UYdCc7L2CVrk0p3VdGB1godOyhk/edit#gid=10). You can download this file by File -- Download As -- Microsoft Excel (.xlsx).
+
+**Submission instructions**: Create a folder named `ds202_hw6`, and name the RMarkDown file including your solutions `hw6.Rmd` under this folder. For the submission, create a GitHub repository named `ds202_hw6` under your GitHub account, and push both `hw6.Rmd` and the knitted `hw6.html` before the deadline. I will assume you use the same GitHub username as for your HW5 submission. The latest version of your homework appearing on GitHub before the deadline is graded. *It is crucial to follow the exact folder structure and file names*, so that your homework can be reproduced and graded by an automated script. This homework is **due on April 22** before class.
+
+1. Import the data and clean appropriately. To read in the data, you can use `readxl::read_xlsx('fileNameHere', sheet='sheetNameHere')`. Required data are in the sheets `Best in show` and `Best in show full sheet`. Take extra care on the column names and the first few rows of the data frame after read in.
+
+```{r}
+full <- readxl::read_xlsx('KIB - Best in Show (public).xlsx', sheet='Best in show full sheet', range = 'A3:BS178')
+
+bis <- readxl::read_xlsx('KIB - Best in Show (public).xlsx', sheet='Best in show', range = 'A6:BS181')
+```
+
+```{r}
+clean_full <- full %>% 
+  filter(`Sources - see bottom right` != 'Dog breed')
+
+clean_full2 <- clean_full %>% 
+  select(`datadog score`, `Sources - see bottom right`)
+
+clean_full2 <- clean_full2 %>% 
+  rename(score = `datadog score`, breed = `Sources - see bottom right`)
+
+clean_bis <- bis %>% 
+  filter(category != 'American Kennel Club group')
+
+clean_bis2 <- clean_bis %>% 
+  select(`Dog breed`, category, `size category`, `popularity ranking (1-173, 1 = most popular)`, `intelligence category`)
+
+clean_bis2 <- clean_bis2 %>% 
+  rename(breed = `Dog breed`, size_category = `size category`, popularity = `popularity ranking (1-173, 1 = most popular)`, intelligence_category = `intelligence category`)
+
+dogs <- merge(clean_bis2, clean_full2, by = c('breed'))
+```
+
+```{r}
+dogs$popularity <- as.integer(dogs$popularity)
+
+dogs$intelligence_category <- as.factor(dogs$intelligence_category)
+
+dogs$category <- as.factor(dogs$category)
+
+dogs$size_category <- as.factor(dogs$size_category)
+```
+
+
+
+2. Create a graphics similar to the  [top dogs](https://informationisbeautiful.net/visualizations/best-in-show-whats-the-top-data-dog/) figure. Your figure needs to display the following information with appropriate plotting elements:
+
+- breed of dog
+- type of dog (work, toy, etc.)
+- size of dog
+- data score 
+- popularity
+- intelligence of the dog
+- appropriate legends & explanation
+
+Hints and Notes:
+
+- The breed of dog can be displayed without the silhouttes (text only is fine)
+- Avoid (too much) overlaps!
+- Choose a good color scheme.
+- Your submission is supposed to be fully reproducible, i.e. the TA and I will 'knit' your submission in RStudio. 
+
+```{r}
+ggplot(dogs, aes(x=score, y=popularity, color=category, shape=size_category, size=intelligence_category)) + geom_point() + geom_text(aes(label=breed), check_overlap = TRUE)
+```
+This plot is pretty self explanatory, dogs towards the bottom left are very popular but do not score high, like a bulldog. Breeds in the bottom right are very popular and score high like chihuahuas. The top left would show unpopular dogs that also score very low but according to our plot, no breeds really fall in that zone. And the top right would be breeds that score very high but are not very popular, like affenpinschers.
